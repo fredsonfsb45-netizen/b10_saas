@@ -11,6 +11,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   async function fetchUserProfile(userId) {
     try {
@@ -22,20 +23,40 @@ export const AuthProvider = ({ children }) => {
         .eq('user_id', userId)
         .single();
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        // Se for um usuário novo e o perfil ainda não existe, tentamos novamente até 5 vezes
+        if (profileError.code === 'PGRST116' && retryCount < 5) {
+          console.log(`Perfil não encontrado. Tentativa ${retryCount + 1} de 5...`);
+          setTimeout(() => {
+            setRetryCount(prev => prev + 1);
+            fetchUserProfile(userId);
+          }, 2000);
+          return;
+        }
+        throw profileError;
+      }
 
       if (data) {
         setUserRole(data.cargo);
         setTenantId(data.restaurante_id);
         setTenantData(data.restaurantes);
+        setError(null);
       }
     } catch (err) {
       console.error("Erro ao buscar perfil:", err.message);
       setError(err.message);
     } finally {
-      setLoading(false);
+      if (retryCount >= 5 || (tenantId && userRole)) {
+        setLoading(false);
+      }
     }
   }
+
+  useEffect(() => {
+    if (user && !tenantId && retryCount < 5) {
+      fetchUserProfile(user.id);
+    }
+  }, [retryCount, user]);
 
   useEffect(() => {
     if (!supabase) {
@@ -79,14 +100,29 @@ export const AuthProvider = ({ children }) => {
   const signUp = (email, password) => supabase.auth.signUp({ email, password });
   const signOut = () => supabase.auth.signOut();
 
-  if (loading) return <div className="h-screen flex items-center justify-center font-bold text-red-600 animate-pulse">Iniciando B10 Gestão...</div>;
+  if (loading) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center bg-gray-50 p-6 text-center">
+        <div className="w-16 h-16 border-4 border-red-600 border-t-transparent rounded-full animate-spin mb-6"></div>
+        <h2 className="text-2xl font-black text-gray-800 mb-2">B10 Gestão</h2>
+        <p className="text-gray-500 animate-pulse font-bold">
+          {retryCount > 0 ? "Finalizando as configurações do restaurante..." : "Iniciando o sistema..."}
+        </p>
+        {retryCount > 0 && (
+          <p className="text-xs text-gray-400 mt-4 max-w-xs">
+            Isso acontece apenas no primeiro acesso enquanto configuramos seu banco de dados.
+          </p>
+        )}
+      </div>
+    );
+  }
 
   if (error && !user) return (
     <div className="h-screen flex items-center justify-center bg-red-50 p-6">
       <div className="bg-white p-8 rounded-2xl shadow-xl border border-red-200 text-center max-w-md">
         <h2 className="text-2xl font-black text-red-600 mb-4">Erro de Configuração</h2>
         <p className="text-gray-600 mb-6">{error}</p>
-        <p className="text-sm text-gray-400">Verifique se você adicionou o VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no painel da Vercel ou do seu provedor.</p>
+        <p className="text-sm text-gray-400">Verifique se você adicionou o VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no painel da Vercel.</p>
       </div>
     </div>
   );
