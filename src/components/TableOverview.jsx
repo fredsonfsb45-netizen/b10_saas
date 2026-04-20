@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import OrderModal from './OrderModal';
 
 export default function TableOverview() {
+  const { tenantData } = useAuth();
   const [tables, setTables] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedTable, setSelectedTable] = useState(null);
@@ -20,8 +21,9 @@ export default function TableOverview() {
 
       if (error) throw error;
 
-      // Gerar array de mesas fixas (SaaS simplificado para o teste)
-      const mockTables = Array.from({ length: 12 }, (_, i) => {
+      // Gerar array de mesas dinâmico
+      const numMesas = tenantData?.num_mesas || 12;
+      const mockTables = Array.from({ length: numMesas }, (_, i) => {
         const mesaNum = `Mesa ${(i + 1).toString().padStart(2, '0')}`;
         const comanda = activeComandas?.find(c => c.mesa === mesaNum);
         return {

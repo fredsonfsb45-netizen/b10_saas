@@ -19,7 +19,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const { data, error: profileError } = await supabase
         .from('usuarios_restaurante')
-        .select('cargo, restaurante_id, restaurantes (nome, cor_primaria, logo_url, status_assinatura)')
+        .select('cargo, restaurante_id, restaurantes (nome, cor_primaria, logo_url, status_assinatura, num_mesas)')
         .eq('user_id', userId)
         .single();
 

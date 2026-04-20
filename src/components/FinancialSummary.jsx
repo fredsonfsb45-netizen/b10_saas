@@ -25,11 +25,15 @@ export default function FinancialSummary() {
       // 3. Mesas Ativas
       const { count: activeMesas } = await supabase.from('comandas').select('*', { count: 'exact', head: true }).eq('status', 'aberta');
 
+      // 4. Cálculo de Lucro Bruto (Vendas - Despesas)
+      // Futuramente podemos integrar o custo dos produtos aqui para Lucro Líquido
+      const lucro = totalVendas - totalDespesas;
+
       setStats([
         { title: 'Vendas Hoje', value: `R$ ${totalVendas.toLocaleString('pt-BR')}`, icon: <DollarSign className="text-green-500" />, change: '+Vidal', color: 'bg-green-50' },
         { title: 'Despesas', value: `R$ ${totalDespesas.toLocaleString('pt-BR')}`, icon: <TrendingDown className="text-red-500" />, change: '-Vidal', color: 'bg-red-50' },
         { title: 'Mesas Ativas', value: activeMesas || 0, icon: <Users className="text-blue-500" />, change: 'Live', color: 'bg-blue-50' },
-        { title: 'Lucro Bruto', value: `R$ ${(totalVendas - totalDespesas).toLocaleString('pt-BR')}`, icon: <TrendingUp className="text-purple-500" />, change: '+Meta', color: 'bg-purple-50' },
+        { title: 'Lucro Previsto', value: `R$ ${lucro.toLocaleString('pt-BR')}`, icon: <TrendingUp className="text-purple-500" />, change: '+Meta', color: 'bg-purple-50' },
       ]);
     } catch (err) {
       console.error("Erro dashboard:", err);
