@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { LogOut, LayoutDashboard, UtensilsCrossed, Flame, Settings } from 'lucide-react';
+import { LogOut, LayoutDashboard, UtensilsCrossed, Flame, Settings, Package } from 'lucide-react';
 import FinancialSummary from '../components/FinancialSummary';
 import TableOverview from '../components/TableOverview';
 import Configuracoes from '../components/Configuracoes';
+import KitchenMonitor from '../components/KitchenMonitor';
+import InventoryManager from '../components/InventoryManager';
 
 export default function Dashboard() {
   const { user, userRole, tenantData, signOut } = useAuth();
@@ -14,16 +16,14 @@ export default function Dashboard() {
   
   const content = () => {
     return (
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-full bg-white">
         {/* Banner de Teste/Trial */}
-        {tenantData?.status_assinatura !== 'ativo_premium' && (
-          <div className="bg-amber-50 border-b border-amber-200 px-6 py-2 flex justify-between items-center animate-pulse">
-            <span className="text-amber-800 text-xs font-bold flex items-center gap-2">
-              ⚠️ MODO DE TESTE ATIVO - Sistema liberado para validação
+        {tenantData?.status_assinatura === 'teste' && (
+          <div className="bg-red-600 px-6 py-2 flex justify-between items-center text-white">
+            <span className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+              🚀 Modo de Teste: Suas funções estão 100% liberadas para exploração
             </span>
-            <button className="text-[10px] bg-amber-200 text-amber-900 px-2 py-0.5 rounded font-black uppercase tracking-tighter">
-              Versão Trial
-            </button>
+            <div className="bg-white/20 px-2 py-0.5 rounded font-black text-[9px] uppercase">Acesso Total</div>
           </div>
         )}
 
@@ -35,25 +35,23 @@ export default function Dashboard() {
                   <div className="animate-in fade-in duration-500">
                     <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-10">
                       <h2 className="text-2xl font-black text-gray-800">Painel Administrativo</h2>
-                      <div className="text-sm font-bold text-gray-400 uppercase tracking-widest">Resumo Financeiro</div>
                     </div>
                     <FinancialSummary />
                     <div className="p-6">
-                      <div className="bg-gray-900 rounded-2xl p-8 text-white flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden relative">
+                      <div className="bg-gray-900 rounded-3xl p-8 text-white flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden relative">
                         <div className="relative z-10">
-                          <h3 className="text-2xl font-black mb-2">Seu DRE está sendo processado</h3>
-                          <p className="text-gray-400 max-w-md text-sm">O sistema está vinculando automaticamente todos os seus lançamentos antigos ao ID do seu restaurante.</p>
+                          <h3 className="text-2xl font-black mb-2 leading-tight">Análise Automática do Seu SaaS</h3>
+                          <p className="text-gray-400 max-w-sm text-sm font-bold">Os números acima vêm do banco de dados em tempo real conforme os pedidos são feitos.</p>
                         </div>
-                        <button className="bg-white text-black font-black px-6 py-3 rounded-full hover:bg-gray-200 transition-all z-10">
-                          Exportar Relatórios
-                        </button>
-                        <div className="absolute top-0 right-0 opacity-10 transform translate-x-10 -translate-y-10">
+                        <div className="absolute top-0 right-0 opacity-10 transform translate-x-10 -translate-y-10 group-hover:scale-110 transition-transform">
                           <LayoutDashboard size={200} />
                         </div>
                       </div>
                     </div>
                   </div>
                 );
+              case 'estoque':
+                return <InventoryManager />;
               case 'garcom':
                 return (
                   <div className="animate-in slide-in-from-right duration-500">
@@ -61,15 +59,7 @@ export default function Dashboard() {
                   </div>
                 );
               case 'cozinha':
-                return (
-                  <div className="p-12 text-center flex flex-col items-center justify-center min-h-[60vh] animate-in zoom-in duration-500">
-                    <div className="p-6 bg-orange-100 rounded-full text-orange-600 mb-6">
-                      <Flame size={48} />
-                    </div>
-                    <h2 className="text-3xl font-black text-gray-800 mb-4">Monitor da Cozinha</h2>
-                    <p className="text-gray-500 max-w-sm mx-auto">Aguardando novos pedidos dos garçons para exibição em tempo real.</p>
-                  </div>
-                );
+                return <KitchenMonitor />;
               case 'config':
                 return <Configuracoes />;
               default:
@@ -83,61 +73,70 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
-      {/* Sidebar / Topbar Muttante (White-label) */}
-      <aside className="bg-gray-900 text-white w-full md:w-64 flex-shrink-0 flex flex-col relative">
-        <div className="p-6 border-b border-gray-800">
-          <h2 className="text-xl font-black truncate" style={{ color: corBrand }}>
-            {tenantData?.logo_url ? <img src={tenantData.logo_url} className="h-8 mb-2" alt="Logo" /> : nomeBrand}
+      {/* Sidebar Social (White-label) */}
+      <aside className="bg-black text-white w-full md:w-72 flex-shrink-0 flex flex-col relative">
+        <div className="p-8 border-b border-gray-900">
+          <h2 className="text-2xl font-black truncate" style={{ color: corBrand }}>
+            {tenantData?.logo_url ? <img src={tenantData.logo_url} className="h-10 mb-2" alt="Logo" /> : nomeBrand}
           </h2>
-          <span className="text-xs text-gray-400">Usuário: {user?.email}</span>
+          <div className="mt-4 flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+            <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Acesso {userRole}</span>
+          </div>
         </div>
-        <nav className="flex-1 p-4 flex flex-col gap-2">
+        
+        <nav className="flex-1 p-6 flex flex-col gap-2">
           {userRole === 'dono' && (
-            <button 
-              onClick={() => setActiveTab('dono')}
-              className={`text-left px-4 py-3 rounded font-bold transition-colors flex items-center gap-2 ${activeTab === 'dono' ? 'text-white' : 'hover:bg-gray-800 text-gray-300'}`}
-              style={activeTab === 'dono' ? { backgroundColor: corBrand } : {}}
-            >
-              <LayoutDashboard size={18} /> Painel Administrativo
-            </button>
+            <>
+              <button 
+                onClick={() => setActiveTab('dono')}
+                className={`text-left px-5 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center gap-3 ${activeTab === 'dono' ? 'bg-red-600 text-white shadow-xl shadow-red-900/40' : 'hover:bg-white/5 text-gray-500'}`}
+              >
+                <LayoutDashboard size={20} /> Dashboard
+              </button>
+              <button 
+                onClick={() => setActiveTab('estoque')}
+                className={`text-left px-5 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center gap-3 ${activeTab === 'estoque' ? 'bg-red-600 text-white shadow-xl shadow-red-900/40' : 'hover:bg-white/5 text-gray-500'}`}
+              >
+                <Package size={20} /> Catálogo & Insumos
+              </button>
+            </>
           )}
+          
+          <div className="h-px bg-gray-900 my-4"></div>
+          
           <button 
             onClick={() => setActiveTab('garcom')}
-            className={`text-left px-4 py-3 rounded font-bold transition-colors flex items-center gap-2 ${activeTab === 'garcom' ? 'text-white' : 'hover:bg-gray-800 text-gray-300'}`}
-            style={activeTab === 'garcom' ? { backgroundColor: corBrand } : {}}
+            className={`text-left px-5 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center gap-3 ${activeTab === 'garcom' ? 'bg-red-600 text-white shadow-xl shadow-red-900/40' : 'hover:bg-white/5 text-gray-500'}`}
           >
-            <UtensilsCrossed size={18} /> Lançamentos Mesa
+            <UtensilsCrossed size={20} /> Mesas (Garçom)
           </button>
           <button 
             onClick={() => setActiveTab('cozinha')}
-            className={`text-left px-4 py-3 rounded font-bold transition-colors flex items-center gap-2 ${activeTab === 'cozinha' ? 'text-white' : 'hover:bg-gray-800 text-gray-300'}`}
-            style={activeTab === 'cozinha' ? { backgroundColor: corBrand } : {}}
+            className={`text-left px-5 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center gap-3 ${activeTab === 'cozinha' ? 'bg-red-600 text-white shadow-xl shadow-red-900/40' : 'hover:bg-white/5 text-gray-500'}`}
           >
-            <Flame size={18} /> Monitor Cozinha
+            <Flame size={20} /> Cozinha
           </button>
           <button 
             onClick={() => setActiveTab('config')}
-            className={`text-left px-4 py-3 rounded font-bold transition-colors flex items-center gap-2 ${activeTab === 'config' ? 'text-white' : 'hover:bg-gray-800 text-gray-300'}`}
-            style={activeTab === 'config' ? { backgroundColor: corBrand } : {}}
+            className={`text-left px-5 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center gap-3 ${activeTab === 'config' ? 'bg-red-600 text-white shadow-xl shadow-red-900/40' : 'hover:bg-white/5 text-gray-500'}`}
           >
-            <Settings size={18} /> Configurações
+            <Settings size={20} /> Configurações
           </button>
         </nav>
         
-        {/* Rodapé SaaS - Sua Marca */}
-        <div className="p-4 border-t border-gray-800 pb-20 md:pb-4">
-          <button onClick={signOut} className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors w-full px-4 py-2 mb-4">
-            <LogOut size={18}/> Sair do Sistema
+        <div className="p-8 border-t border-gray-900">
+          <button onClick={signOut} className="flex items-center gap-3 text-gray-500 hover:text-red-500 font-black text-xs uppercase tracking-widest transition-all w-full">
+            <LogOut size={20}/> Sair do B10
           </button>
-          <div className="text-center text-[10px] text-gray-600 uppercase tracking-widest opacity-50 mt-4">
-            Powered by<br/><span className="font-bold text-gray-400">B10 Gestão SaaS</span>
+          <div className="mt-8 opacity-20">
+            <p className="text-[8px] font-black uppercase tracking-[0.3em]">B10 Gestão SaaS Premium</p>
           </div>
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 max-w-7xl w-full p-6 mx-auto overflow-y-auto">
-        <div className="bg-white rounded-2xl shadow-xl min-h-[80vh] overflow-hidden border border-gray-100">
+      <main className="flex-1 max-w-7xl w-full p-4 md:p-8 mx-auto overflow-y-auto">
+        <div className="bg-white rounded-[40px] shadow-2xl min-h-[85vh] overflow-hidden border border-gray-100">
           {content()}
         </div>
       </main>

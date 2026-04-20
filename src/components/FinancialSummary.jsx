@@ -1,26 +1,60 @@
+import { useEffect, useState } from 'react';
 import { TrendingUp, TrendingDown, DollarSign, Users } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 export default function FinancialSummary() {
-  const stats = [
-    { title: 'Vendas Hoje', value: 'R$ 1.250,00', icon: <DollarSign className="text-green-500" />, change: '+12%', color: 'bg-green-50' },
-    { title: 'Despesas', value: 'R$ 450,00', icon: <TrendingDown className="text-red-500" />, change: '-5%', color: 'bg-red-50' },
-    { title: 'Clientes', value: '42', icon: <Users className="text-blue-500" />, change: '+8%', color: 'bg-blue-50' },
-    { title: 'Lucro Estimado', value: 'R$ 800,00', icon: <TrendingUp className="text-purple-500" />, change: '+15%', color: 'bg-purple-50' },
-  ];
+  const [stats, setStats] = useState([
+    { title: 'Vendas Hoje', value: 'R$ 0,00', icon: <DollarSign className="text-green-500" />, change: '0%', color: 'bg-green-50' },
+    { title: 'Despesas', value: 'R$ 0,00', icon: <TrendingDown className="text-red-500" />, change: '0%', color: 'bg-red-50' },
+    { title: 'Mesas Ativas', value: '0', icon: <Users className="text-blue-500" />, change: 'Sinc', color: 'bg-blue-50' },
+    { title: 'Lucro Bruto', value: 'R$ 0,00', icon: <TrendingUp className="text-purple-500" />, change: '0%', color: 'bg-purple-50' },
+  ]);
+
+  const fetchStats = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      // 1. Vendas Hoje
+      const { data: vData } = await supabase.from('comandas').select('total').gte('criado_em', today);
+      const totalVendas = vData?.reduce((acc, c) => acc + c.total, 0) || 0;
+
+      // 2. Despesas Hoje
+      const { data: dData } = await supabase.from('despesas').select('valor').gte('data_vencimento', today);
+      const totalDespesas = dData?.reduce((acc, d) => acc + d.valor, 0) || 0;
+
+      // 3. Mesas Ativas
+      const { count: activeMesas } = await supabase.from('comandas').select('*', { count: 'exact', head: true }).eq('status', 'aberta');
+
+      setStats([
+        { title: 'Vendas Hoje', value: `R$ ${totalVendas.toLocaleString('pt-BR')}`, icon: <DollarSign className="text-green-500" />, change: '+Vidal', color: 'bg-green-50' },
+        { title: 'Despesas', value: `R$ ${totalDespesas.toLocaleString('pt-BR')}`, icon: <TrendingDown className="text-red-500" />, change: '-Vidal', color: 'bg-red-50' },
+        { title: 'Mesas Ativas', value: activeMesas || 0, icon: <Users className="text-blue-500" />, change: 'Live', color: 'bg-blue-50' },
+        { title: 'Lucro Bruto', value: `R$ ${(totalVendas - totalDespesas).toLocaleString('pt-BR')}`, icon: <TrendingUp className="text-purple-500" />, change: '+Meta', color: 'bg-purple-50' },
+      ]);
+    } catch (err) {
+      console.error("Erro dashboard:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchStats();
+    const interval = setInterval(fetchStats, 30000); // 30s
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 p-6">
       {stats.map((stat, index) => (
-        <div key={index} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+        <div key={index} className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
           <div className="flex justify-between items-start mb-4">
             <div className={`p-3 rounded-xl ${stat.color}`}>
               {stat.icon}
             </div>
-            <span className={`text-xs font-bold px-2 py-1 rounded-full ${stat.change.startsWith('+') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+            <span className="text-[10px] font-black px-2 py-1 bg-gray-50 text-gray-400 rounded-full uppercase tracking-widest">
               {stat.change}
             </span>
           </div>
-          <h3 className="text-gray-500 text-sm font-medium">{stat.title}</h3>
+          <h3 className="text-gray-400 text-xs font-black uppercase tracking-widest">{stat.title}</h3>
           <p className="text-2xl font-black text-gray-900 mt-1">{stat.value}</p>
         </div>
       ))}
