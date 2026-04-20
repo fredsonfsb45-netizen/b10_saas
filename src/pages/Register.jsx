@@ -25,7 +25,10 @@ export default function Register() {
       if (authError) throw authError;
 
       const userId = authData.user?.id;
-      if (!userId) throw new Error("Erro ao gerar ID de usuário.");
+      if (!userId) throw new Error("Usuário criado, mas aguardando confirmação de e-mail. Por favor, verifique sua caixa de entrada ou desative a confirmação no Supabase.");
+
+      // Pequena pausa para garantir que o Supabase registrou o usuário no banco
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       // 2. Criar o Restaurante
       const { data: restData, error: restError } = await supabase
