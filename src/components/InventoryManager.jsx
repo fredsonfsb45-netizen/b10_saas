@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Package, Beef, Search, Plus, Trash2, Edit3, Save, X, Layers, ShoppingBag } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function InventoryManager() {
   const [activeSubTab, setActiveSubTab] = useState('produtos'); // 'produtos' ou 'insumos'
@@ -11,7 +12,9 @@ export default function InventoryManager() {
   const [newName, setNewName] = useState('');
   const [newPrice, setNewPrice] = useState('');
   const [newCategory, setNewCategory] = useState('');
+  const [newCost, setNewCost] = useState('');
   const [newUnit, setNewUnit] = useState('kg');
+  const { user } = useAuth();
   const [selectedItem, setSelectedItem] = useState(null);
   const [entryQty, setEntryQty] = useState('');
   const [history, setHistory] = useState([]);
@@ -55,11 +58,12 @@ export default function InventoryManager() {
       .eq('id', selectedItem.id);
 
     if (!error) {
-      // Salva no histórico
+      // Salva no histórico com auditoria
       await supabase.from('historico_estoque').insert([{
         item_nome: selectedItem.nome,
         quantidade: parseFloat(entryQty),
-        tipo: 'entrada'
+        tipo: 'entrada',
+        user_id: user?.id
       }]);
 
       setSelectedItem(null);
@@ -74,7 +78,7 @@ export default function InventoryManager() {
     e.preventDefault();
     const table = activeSubTab === 'produtos' ? 'produtos' : 'insumos';
     const payload = activeSubTab === 'produtos' 
-      ? { nome: newName, preco: parseFloat(newPrice), categoria: newCategory }
+      ? { nome: newName, preco: parseFloat(newPrice), custo: parseFloat(newCost), categoria: newCategory }
       : { nome: newName, quantidade: 0, unidade_medida: newUnit, custo_unitario: parseFloat(newPrice) };
 
     const { error } = await supabase.from(table).insert([payload]);
@@ -82,6 +86,7 @@ export default function InventoryManager() {
       setIsAdding(false);
       setNewName('');
       setNewPrice('');
+      setNewCost('');
       setNewCategory('');
       fetchData();
     }
@@ -238,6 +243,17 @@ export default function InventoryManager() {
               value={newPrice}
               onChange={(e) => setNewPrice(e.target.value)}
             />
+            {activeSubTab === 'produtos' && (
+              <input 
+                required
+                type="number"
+                step="0.01"
+                placeholder="Custo do Prato"
+                className="p-3 rounded-xl border border-red-200 outline-none font-bold text-sm"
+                value={newCost}
+                onChange={(e) => setNewCost(e.target.value)}
+              />
+            )}
             {activeSubTab === 'produtos' ? (
               <input 
                 placeholder="Categoria (Ex: Bebidas)"

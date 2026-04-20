@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS produtos (
     restaurante_id INTEGER REFERENCES restaurantes(id),
     nome VARCHAR(255) NOT NULL,
     preco DECIMAL(10,2) NOT NULL,
+    custo DECIMAL(10,2) DEFAULT 0,
     categoria VARCHAR(100),
     estoque_atual INTEGER DEFAULT 0,
     imagem_url TEXT
@@ -60,6 +61,26 @@ CREATE TABLE IF NOT EXISTS itens_pedido (
     criado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS historico_estoque (
+    id SERIAL PRIMARY KEY,
+    restaurante_id INTEGER REFERENCES restaurantes(id),
+    user_id UUID REFERENCES auth.users(id),
+    item_nome VARCHAR(255) NOT NULL,
+    quantidade DECIMAL(10,2) NOT NULL,
+    tipo VARCHAR(50) DEFAULT 'entrada',
+    criado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS fichas_tecnicas (
+    id SERIAL PRIMARY KEY,
+    restaurante_id INTEGER REFERENCES restaurantes(id) NOT NULL,
+    produto_id INTEGER REFERENCES produtos(id) ON DELETE CASCADE NOT NULL,
+    insumo_id INTEGER REFERENCES insumos(id) ON DELETE CASCADE NOT NULL,
+    quantidade_necessaria DECIMAL(10,2) NOT NULL,
+    criado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT unique_prod_insumo UNIQUE (produto_id, insumo_id)
+);
+
 -- 2. FUNÇÕES DE SUPORTE E SEGURANÇA
 CREATE OR REPLACE FUNCTION get_user_restaurante_id()
 RETURNS INTEGER AS $$
@@ -77,23 +98,30 @@ $$ LANGUAGE plpgsql;
 -- 3. LÓGICA DE ESTOQUE AUTOMÁTICO (ABATE E ESTORNO)
 CREATE OR REPLACE FUNCTION handle_order_item_stock()
 RETURNS TRIGGER AS $$
+DECLARE
+    ficha_rec RECORD;
 BEGIN
     IF (TG_OP = 'INSERT') THEN
-        -- Abate o estoque ao vender
-        UPDATE produtos 
-        SET estoque_atual = estoque_atual - NEW.quantidade 
-        WHERE id = NEW.produto_id;
+        -- Baixa do Produto
+        UPDATE produtos SET estoque_atual = estoque_atual - NEW.quantidade WHERE id = NEW.produto_id;
+        
+        -- Baixa dos Insumos vinculados
+        FOR ficha_rec IN SELECT insumo_id, quantidade_necessaria FROM fichas_tecnicas WHERE produto_id = NEW.produto_id LOOP
+            UPDATE insumos SET quantidade = quantidade - (ficha_rec.quantidade_necessaria * NEW.quantidade)
+            WHERE id = ficha_rec.insumo_id;
+        END LOOP;
         RETURN NEW;
     ELSIF (TG_OP = 'DELETE') THEN
-        -- Retorna ao estoque se o item for deletado do pedido
-        UPDATE produtos 
-        SET estoque_atual = estoque_atual + OLD.quantidade 
-        WHERE id = OLD.produto_id;
+        -- Estorno do Produto
+        UPDATE produtos SET estoque_atual = estoque_atual + OLD.quantidade WHERE id = OLD.produto_id;
         
-        -- Atualiza o total da comanda subtraindo o valor do item removido
-        UPDATE comandas 
-        SET total = total - (OLD.quantidade * OLD.preco_unitario) 
-        WHERE id = OLD.comanda_id;
+        -- Estorno dos Insumos vinculados
+        FOR ficha_rec IN SELECT insumo_id, quantidade_necessaria FROM fichas_tecnicas WHERE produto_id = OLD.produto_id LOOP
+            UPDATE insumos SET quantidade = quantidade + (ficha_rec.quantidade_necessaria * OLD.quantidade)
+            WHERE id = ficha_rec.insumo_id;
+        END LOOP;
+        
+        UPDATE comandas SET total = total - (OLD.quantidade * OLD.preco_unitario) WHERE id = OLD.comanda_id;
         RETURN OLD;
     END IF;
     RETURN NULL;
@@ -112,12 +140,18 @@ DECLARE
     t text;
 BEGIN 
     FOR t IN SELECT tablename FROM pg_tables WHERE schemaname = 'public' 
-    AND tablename IN ('produtos', 'insumos', 'comandas', 'itens_pedido')
+    AND tablename IN ('produtos', 'insumos', 'comandas', 'itens_pedido', 'historico_estoque', 'fichas_tecnicas')
     LOOP
         EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
         EXECUTE format('DROP POLICY IF EXISTS "Acesso SaaS" ON %I', t);
         EXECUTE format('CREATE POLICY "Acesso SaaS" ON %I FOR ALL USING (restaurante_id = get_user_restaurante_id()) WITH CHECK (restaurante_id = get_user_restaurante_id())', t);
     END LOOP;
+    
+    -- Trigger para restaurante_id em fichas_tecnicas
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'tr_set_rest_fichas') THEN
+        CREATE TRIGGER tr_set_rest_fichas BEFORE INSERT ON fichas_tecnicas 
+        FOR EACH ROW EXECUTE FUNCTION set_restaurante_id_for_new_row();
+    END IF;
 END $$;
 
 -- 6. RPC PARA INCREMENTAR TOTAL (USADO NO FRONTEND)

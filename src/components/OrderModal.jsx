@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { X, Plus, Minus, Receipt, ShoppingCart, CheckCircle, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
@@ -10,18 +10,19 @@ export default function OrderModal({ table, onClose }) {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('menu'); // 'menu' ou 'conta'
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     const { data, error } = await supabase.from('produtos').select('*').order('nome');
     if (!error) setProducts(data);
-  };
-
-  const fetchComandaItems = async () => {
+  }, []);
+  
+  const fetchComandaItems = useCallback(async () => {
+    if (!comandaId) return;
     const { data, error } = await supabase
       .from('itens_pedido')
       .select('*, produtos(nome)')
       .eq('comanda_id', comandaId);
     if (!error) setComandaItems(data);
-  };
+  }, [comandaId]);
 
   useEffect(() => {
     fetchProducts();
@@ -89,7 +90,7 @@ export default function OrderModal({ table, onClose }) {
       fetchComandaItems();
       setActiveTab('conta');
     } catch (err) {
-      alert("Erro ao lançar itens: " + err.message);
+      console.error("Erro ao lançar itens:", err.message);
     } finally {
       setLoading(false);
     }
@@ -107,7 +108,7 @@ export default function OrderModal({ table, onClose }) {
       if (error) throw error;
       onClose();
     } catch (err) {
-      alert("Erro ao fechar conta: " + err.message);
+      console.error("Erro ao fechar conta:", err.message);
     } finally {
       setLoading(false);
     }
@@ -125,7 +126,7 @@ export default function OrderModal({ table, onClose }) {
       if (error) throw error;
       fetchComandaItems();
     } catch (err) {
-      alert("Erro ao excluir item: " + err.message);
+      console.error("Erro ao excluir item:", err.message);
     } finally {
       setLoading(false);
     }
