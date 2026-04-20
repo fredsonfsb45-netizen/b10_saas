@@ -24,7 +24,7 @@ export default function InventoryManager() {
 
   useEffect(() => {
     fetchData();
-  }, [activeSubTab]);
+  }, [activeSubTab, fetchData]);
 
   const handleAdd = async (e) => {
     e.preventDefault();
@@ -150,6 +150,9 @@ export default function InventoryManager() {
                 {activeSubTab === 'produtos' ? 'Preço' : 'Custo'}
               </th>
               <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                {activeSubTab === 'produtos' ? 'Estoque' : 'Qtd Atual'}
+              </th>
+              <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">
                 {activeSubTab === 'produtos' ? 'Categoria' : 'Unidade'}
               </th>
               <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Ação</th>
@@ -161,6 +164,9 @@ export default function InventoryManager() {
                 <td className="p-4 font-bold text-gray-800">{item.nome}</td>
                 <td className="p-4 font-black text-red-600">
                   R$ {(activeSubTab === 'produtos' ? item.preco : item.custo_unitario).toFixed(2)}
+                </td>
+                <td className="p-4 italic font-bold text-gray-500">
+                  {activeSubTab === 'produtos' ? item.estoque_atual : item.quantidade} {activeSubTab === 'insumos' && item.unidade_medida}
                 </td>
                 <td className="p-4">
                   <span className="text-[10px] font-black bg-gray-100 text-gray-500 px-2 py-1 rounded uppercase tracking-wider">

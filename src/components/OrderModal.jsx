@@ -28,7 +28,7 @@ export default function OrderModal({ table, onClose }) {
     if (comandaId) {
       fetchComandaItems();
     }
-  }, [comandaId]);
+  }, [comandaId, fetchProducts, fetchComandaItems]);
 
   const addToCart = (product) => {
     const existing = cart.find(item => item.id === product.id);
@@ -113,15 +113,33 @@ export default function OrderModal({ table, onClose }) {
     }
   };
 
+  const handleDeleteItem = async (itemId) => {
+    if (!window.confirm("Deseja remover este item do pedido?")) return;
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('itens_pedido')
+        .delete()
+        .eq('id', itemId);
+      
+      if (error) throw error;
+      fetchComandaItems();
+    } catch (err) {
+      alert("Erro ao excluir item: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+      <div className="bg-white w-full max-w-2xl rounded-[40px] overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
         
         {/* Header */}
         <div className="bg-red-600 p-6 text-white flex justify-between items-center">
           <div>
             <h2 className="text-2xl font-black">{table.id}</h2>
-            <p className="text-red-100 text-xs font-bold uppercase tracking-widest">
+            <p className="text-red-100 text-[10px] font-black uppercase tracking-widest">
               {comandaId ? 'Comanda em Aberto' : 'Mesa Disponível'}
             </p>
           </div>
@@ -131,16 +149,16 @@ export default function OrderModal({ table, onClose }) {
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-gray-100">
+        <div className="flex border-b border-gray-100 px-4">
           <button 
             onClick={() => setActiveTab('menu')}
-            className={`flex-1 py-4 font-black text-sm uppercase tracking-wider transition-all ${activeTab === 'menu' ? 'text-red-600 border-b-4 border-red-600' : 'text-gray-400'}`}
+            className={`flex-1 py-4 font-black text-xs uppercase tracking-widest transition-all ${activeTab === 'menu' ? 'text-red-600 border-b-4 border-red-600' : 'text-gray-400'}`}
           >
             Lançar Items
           </button>
           <button 
             onClick={() => setActiveTab('conta')}
-            className={`flex-1 py-4 font-black text-sm uppercase tracking-wider transition-all ${activeTab === 'conta' ? 'text-red-600 border-b-4 border-red-600' : 'text-gray-400'}`}
+            className={`flex-1 py-4 font-black text-xs uppercase tracking-widest transition-all ${activeTab === 'conta' ? 'text-red-600 border-b-4 border-red-600' : 'text-gray-400'}`}
           >
             Ver Conta {comandaItems.length > 0 && `(${comandaItems.length})`}
           </button>
@@ -151,11 +169,15 @@ export default function OrderModal({ table, onClose }) {
           {activeTab === 'menu' ? (
             <div className="grid grid-cols-1 gap-3">
               {products.map(product => (
-                <div key={product.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center group hover:border-red-200 transition-all">
+                <div key={product.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex justify-between items-center group hover:border-red-200 transition-all">
                   <div>
                     <h4 className="font-bold text-gray-800">{product.nome}</h4>
-                    <p className="text-red-600 font-black">R$ {product.preco.toLocaleString('pt-BR')}</p>
-                    <span className="text-[10px] text-gray-400 uppercase font-bold">{product.categoria}</span>
+                    <div className="flex items-center gap-3 mt-1">
+                      <p className="text-red-600 font-black">R$ {product.preco.toLocaleString('pt-BR')}</p>
+                      <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${product.estoque_atual > 5 ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                        Estoque: {product.estoque_atual}
+                      </span>
+                    </div>
                   </div>
                   <div className="flex items-center gap-3">
                     {cart.find(i => i.id === product.id) ? (
@@ -166,14 +188,19 @@ export default function OrderModal({ table, onClose }) {
                         <span className="font-black text-red-600 w-4 text-center">
                           {cart.find(i => i.id === product.id).qty}
                         </span>
-                        <button onClick={() => addToCart(product)} className="w-8 h-8 rounded-full bg-white text-red-600 shadow-sm flex items-center justify-center hover:bg-red-600 hover:text-white transition-all">
+                        <button 
+                          disabled={product.estoque_atual <= (cart.find(i => i.id === product.id).qty)}
+                          onClick={() => addToCart(product)} 
+                          className="w-8 h-8 rounded-full bg-white text-red-600 shadow-sm flex items-center justify-center hover:bg-red-600 hover:text-white transition-all disabled:opacity-30"
+                        >
                           <Plus size={16} />
                         </button>
                       </div>
                     ) : (
                       <button 
+                        disabled={product.estoque_atual <= 0}
                         onClick={() => addToCart(product)}
-                        className="bg-gray-100 hover:bg-red-600 hover:text-white text-gray-600 p-3 rounded-xl transition-all"
+                        className="bg-gray-100 hover:bg-red-600 hover:text-white text-gray-600 p-3 rounded-xl transition-all disabled:opacity-20"
                       >
                         <Plus size={20} />
                       </button>
@@ -187,28 +214,33 @@ export default function OrderModal({ table, onClose }) {
               {comandaItems.length === 0 ? (
                 <div className="text-center py-10 opacity-30">
                   <Receipt size={64} className="mx-auto mb-4" />
-                  <p className="font-bold uppercase tracking-widest">Nenhum item consumido</p>
+                  <p className="font-bold uppercase tracking-widest text-xs">Nenhum item consumido</p>
                 </div>
               ) : (
                 <div className="space-y-2">
                   {comandaItems.map(item => (
-                    <div key={item.id} className="bg-white p-4 rounded-xl border border-gray-100 flex justify-between items-center transition-all hover:shadow-md">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center text-red-600 font-black text-xs">
+                    <div key={item.id} className="bg-white p-4 rounded-2xl border border-gray-100 flex justify-between items-center animate-in slide-in-from-left duration-300">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center text-red-600 font-black text-sm">
                           {item.quantidade}x
                         </div>
                         <div>
-                          <p className="font-bold text-gray-800">{item.produtos?.nome}</p>
-                          <p className="text-[10px] uppercase font-bold text-gray-400">Status: {item.status}</p>
+                          <p className="font-black text-gray-800">{item.produtos?.nome}</p>
+                          <p className="text-[9px] uppercase font-bold text-gray-400">Total: R$ {(item.preco_unitario * item.quantidade).toLocaleString('pt-BR')}</p>
                         </div>
                       </div>
-                      <p className="font-black text-gray-900 text-sm">R$ {(item.preco_unitario * item.quantidade).toLocaleString('pt-BR')}</p>
+                      <button 
+                        onClick={() => handleDeleteItem(item.id)}
+                        className="p-3 text-gray-300 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                      >
+                        <Trash2 size={18} />
+                      </button>
                     </div>
                   ))}
-                  <div className="mt-6 pt-6 border-t-2 border-dashed border-gray-200">
-                    <div className="flex justify-between items-center mb-6">
-                      <span className="text-gray-400 font-bold uppercase tracking-widest">Total da Conta</span>
-                      <span className="text-2xl font-black text-red-600">
+                  <div className="mt-8 pt-8 border-t-2 border-dashed border-gray-200">
+                    <div className="flex justify-between items-center mb-6 px-2">
+                      <span className="text-gray-400 font-black uppercase text-[10px] tracking-[0.2em]">Total Acumulado</span>
+                      <span className="text-3xl font-black text-red-600">
                         R$ {comandaItems.reduce((acc, item) => acc + (item.preco_unitario * item.quantidade), 0).toLocaleString('pt-BR')}
                       </span>
                     </div>
@@ -220,16 +252,16 @@ export default function OrderModal({ table, onClose }) {
         </div>
 
         {/* Footer Actions */}
-        <div className="p-6 bg-white border-t border-gray-100 flex gap-4">
+        <div className="p-8 bg-white border-t border-gray-100 flex gap-4">
           {activeTab === 'menu' ? (
             <button 
               disabled={cart.length === 0 || loading}
               onClick={handleLaunchItems}
-              className="flex-1 bg-red-600 disabled:bg-gray-200 text-white font-black py-4 rounded-2xl shadow-lg shadow-red-200 flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-95"
+              className="flex-1 bg-red-600 disabled:bg-gray-200 text-white font-black py-4 rounded-2xl shadow-xl shadow-red-200 flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-95"
             >
               {loading ? "Processando..." : (
                 <>
-                  <ShoppingCart size={20} /> Lançar Pedido (R$ {cart.reduce((acc, item) => acc + (item.preco * item.qty), 0).toFixed(2)})
+                  <ShoppingCart size={20} /> CONFIRMAR PEDIDO (R$ {cart.reduce((acc, item) => acc + (item.preco * item.qty), 0).toFixed(2)})
                 </>
               )}
             </button>
@@ -237,9 +269,9 @@ export default function OrderModal({ table, onClose }) {
             <button 
               disabled={comandaItems.length === 0 || loading}
               onClick={handleCloseComanda}
-              className="flex-1 bg-black text-white font-black py-4 rounded-2xl shadow-lg shadow-gray-200 flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-20"
+              className="flex-1 bg-black text-white font-black py-4 rounded-2xl shadow-xl shadow-gray-200 flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-20"
             >
-              <CheckCircle size={20} /> Fechar e Imprimir Conta
+              <CheckCircle size={20} /> FINALIZAR E LIBERAR MESA
             </button>
           )}
         </div>
