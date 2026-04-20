@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Package, Beef, Search, Plus, Trash2, Edit3, Save, X, Layers, ShoppingBag } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
@@ -8,23 +8,67 @@ export default function InventoryManager() {
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
   
-  // States for new item
   const [newName, setNewName] = useState('');
   const [newPrice, setNewPrice] = useState('');
   const [newCategory, setNewCategory] = useState('');
   const [newUnit, setNewUnit] = useState('kg');
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [entryQty, setEntryQty] = useState('');
+  const [history, setHistory] = useState([]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
-    const table = activeSubTab === 'produtos' ? 'produtos' : 'insumos';
-    const { data: result, error } = await supabase.from(table).select('*').order('nome');
-    if (!error) setData(result);
+    if (activeSubTab === 'entradas') {
+      const { data: pros } = await supabase.from('produtos').select('id, nome, estoque_atual');
+      const { data: insu } = await supabase.from('insumos').select('id, nome, quantidade');
+      const { data: hist } = await supabase.from('historico_estoque').select('*').order('criado_em', { ascending: false }).limit(15);
+      
+      const formattedPros = pros?.map(i => ({ ...i, type: 'produto' })) || [];
+      const formattedInsu = insu?.map(i => ({ ...i, type: 'insumo', estoque_atual: i.quantidade })) || [];
+      
+      setData([...formattedPros, ...formattedInsu]);
+      setHistory(hist || []);
+    } else {
+      const table = activeSubTab === 'produtos' ? 'produtos' : 'insumos';
+      const { data: result, error } = await supabase.from(table).select('*').order('nome');
+      if (!error) setData(result);
+    }
     setLoading(false);
-  };
+  }, [activeSubTab]);
 
   useEffect(() => {
     fetchData();
   }, [activeSubTab, fetchData]);
+
+  const handleStockEntry = async (e) => {
+    e.preventDefault();
+    if (!selectedItem || !entryQty) return;
+    
+    setLoading(true);
+    const table = selectedItem.type === 'produto' ? 'produtos' : 'insumos';
+    const field = selectedItem.type === 'produto' ? 'estoque_atual' : 'quantidade';
+    const currentQty = selectedItem.type === 'produto' ? selectedItem.estoque_atual : selectedItem.quantidade;
+    
+    const { error } = await supabase
+      .from(table)
+      .update({ [field]: parseFloat(currentQty) + parseFloat(entryQty) })
+      .eq('id', selectedItem.id);
+
+    if (!error) {
+      // Salva no histórico
+      await supabase.from('historico_estoque').insert([{
+        item_nome: selectedItem.nome,
+        quantidade: parseFloat(entryQty),
+        tipo: 'entrada'
+      }]);
+
+      setSelectedItem(null);
+      setEntryQty('');
+      fetchData();
+      alert("Estoque atualizado e registrado no histórico!");
+    }
+    setLoading(false);
+  };
 
   const handleAdd = async (e) => {
     e.preventDefault();
@@ -62,35 +106,114 @@ export default function InventoryManager() {
         <div className="flex bg-gray-100 p-1 rounded-xl">
           <button 
             onClick={() => setActiveSubTab('produtos')}
-            className={`px-6 py-2 rounded-lg font-black text-xs uppercase tracking-widest transition-all ${activeSubTab === 'produtos' ? 'bg-white text-red-600 shadow-sm' : 'text-gray-400'}`}
+            className={`px-4 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all ${activeSubTab === 'produtos' ? 'bg-white text-red-600 shadow-sm' : 'text-gray-400'}`}
           >
-            Produtos (Venda)
+            Produtos
           </button>
           <button 
             onClick={() => setActiveSubTab('insumos')}
-            className={`px-6 py-2 rounded-lg font-black text-xs uppercase tracking-widest transition-all ${activeSubTab === 'insumos' ? 'bg-white text-red-600 shadow-sm' : 'text-gray-400'}`}
+            className={`px-4 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all ${activeSubTab === 'insumos' ? 'bg-white text-red-600 shadow-sm' : 'text-gray-400'}`}
           >
-            Insumos (Estoque)
+            Insumos
+          </button>
+          <button 
+            onClick={() => setActiveSubTab('entradas')}
+            className={`px-4 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all ${activeSubTab === 'entradas' ? 'bg-white text-red-600 shadow-sm' : 'text-gray-400'}`}
+          >
+            Entradas
           </button>
         </div>
       </div>
 
-      <div className="mb-6 flex gap-4">
-        <div className="flex-1 relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <input 
-            type="text" 
-            placeholder={`Buscar ${activeSubTab}...`}
-            className="w-full pl-12 pr-4 py-3 bg-white border border-gray-100 rounded-2xl shadow-sm focus:ring-2 focus:ring-red-500 outline-none font-bold"
-          />
+      {activeSubTab === 'entradas' ? (
+        <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-xl mb-10">
+          <h3 className="text-xl font-black mb-6 flex items-center gap-2">
+            <ShoppingBag className="text-red-600" /> Registrar Entrada de Estoque
+          </h3>
+          <form onSubmit={handleStockEntry} className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="flex flex-col gap-2">
+              <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Selecionar Item</label>
+              <select 
+                className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold outline-none ring-2 ring-transparent focus:ring-red-500 transition-all"
+                value={selectedItem?.id || ''}
+                onChange={(e) => setSelectedItem(data.find(i => i.id === parseInt(e.target.value)))}
+                required
+              >
+                <option value="">Escolha um produto ou insumo...</option>
+                {data.map(item => (
+                  <option key={`${item.type}-${item.id}`} value={item.id}>
+                    [{item.type.toUpperCase()}] {item.nome} (Atual: {item.estoque_atual})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Quantidade a Adicionar</label>
+              <input 
+                type="number" 
+                placeholder="Ex: 50"
+                className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold outline-none ring-2 ring-transparent focus:ring-red-500 transition-all"
+                value={entryQty}
+                onChange={(e) => setEntryQty(e.target.value)}
+                required
+              />
+            </div>
+            <div className="flex items-end">
+              <button 
+                type="submit"
+                disabled={loading}
+                className="w-full bg-red-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-red-200 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
+              >
+                {loading ? "Processando..." : <><Plus size={20} /> ADICIONAR AO ESTOQUE</>}
+              </button>
+            </div>
+          </form>
+
+          <div className="mt-12">
+            <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-4 flex items-center gap-2">
+              <Layers size={14} /> Últimas Movimentações (Audit)
+            </h4>
+            <div className="space-y-2">
+              {history.map(log => (
+                <div key={log.id} className="flex justify-between items-center bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center font-black text-[10px]">
+                      +{log.quantidade}
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-800 text-sm">{log.item_nome}</p>
+                      <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">
+                        {new Date(log.criado_em).toLocaleString('pt-BR')}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-black text-green-600 uppercase bg-green-50 px-2 py-1 rounded">Entrada</span>
+                </div>
+              ))}
+              {history.length === 0 && (
+                <p className="text-center py-6 text-gray-300 text-xs font-bold uppercase tracking-widest opacity-30">Nenhum histórico disponível</p>
+              )}
+            </div>
+          </div>
         </div>
-        <button 
-          onClick={() => setIsAdding(true)}
-          className="bg-black text-white px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-red-600 transition-all"
-        >
-          <Plus size={18} /> Novo Item
-        </button>
-      </div>
+      ) : (
+        <>
+          <div className="mb-6 flex gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <input 
+                type="text" 
+                placeholder={`Buscar ${activeSubTab}...`}
+                className="w-full pl-12 pr-4 py-3 bg-white border border-gray-100 rounded-2xl shadow-sm focus:ring-2 focus:ring-red-500 outline-none font-bold"
+              />
+            </div>
+            <button 
+              onClick={() => setIsAdding(true)}
+              className="bg-black text-white px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-red-600 transition-all"
+            >
+              <Plus size={18} /> Novo Item
+            </button>
+          </div>
 
       {isAdding && (
         <div className="bg-red-50 p-6 rounded-3xl border-2 border-red-100 mb-8 animate-in fade-in slide-in-from-top-2">
@@ -147,7 +270,7 @@ export default function InventoryManager() {
             <tr>
               <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Item</th>
               <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                {activeSubTab === 'produtos' ? 'Preço' : 'Custo'}
+                {activeSubTab === 'entradas' ? 'Ref' : (activeSubTab === 'produtos' ? 'Preço' : 'Custo')}
               </th>
               <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">
                 {activeSubTab === 'produtos' ? 'Estoque' : 'Qtd Atual'}
@@ -161,12 +284,14 @@ export default function InventoryManager() {
           <tbody className="divide-y divide-gray-50">
             {data.map(item => (
               <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
-                <td className="p-4 font-bold text-gray-800">{item.nome}</td>
+                <td className="p-4 font-bold text-gray-800">
+                  {item.type ? `[${item.type.toUpperCase()}] ` : ''}{item.nome}
+                </td>
                 <td className="p-4 font-black text-red-600">
-                  R$ {(activeSubTab === 'produtos' ? item.preco : item.custo_unitario).toFixed(2)}
+                  {activeSubTab === 'entradas' ? (item.type === 'produto' ? 'P' : 'I') : `R$ ${(activeSubTab === 'produtos' ? item.preco : item.custo_unitario).toFixed(2)}`}
                 </td>
                 <td className="p-4 italic font-bold text-gray-500">
-                  {activeSubTab === 'produtos' ? item.estoque_atual : item.quantidade} {activeSubTab === 'insumos' && item.unidade_medida}
+                  {activeSubTab === 'produtos' ? item.estoque_atual : (activeSubTab === 'entradas' ? item.estoque_atual : item.quantidade)} {activeSubTab === 'insumos' && item.unidade_medida}
                 </td>
                 <td className="p-4">
                   <span className="text-[10px] font-black bg-gray-100 text-gray-500 px-2 py-1 rounded uppercase tracking-wider">
@@ -174,9 +299,11 @@ export default function InventoryManager() {
                   </span>
                 </td>
                 <td className="p-4 text-right">
-                  <button onClick={() => handleDelete(item.id)} className="text-gray-300 hover:text-red-600 transition-colors">
-                    <Trash2 size={18} />
-                  </button>
+                  {activeSubTab !== 'entradas' && (
+                    <button onClick={() => handleDelete(item.id)} className="text-gray-300 hover:text-red-600 transition-colors">
+                      <Trash2 size={18} />
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}
@@ -186,6 +313,8 @@ export default function InventoryManager() {
           <div className="p-20 text-center opacity-20 font-black uppercase tracking-widest">Nenhum item cadastrado</div>
         )}
       </div>
-    </div>
+    </>
+  )}
+</div>
   );
 }
