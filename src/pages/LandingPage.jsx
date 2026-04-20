@@ -24,8 +24,8 @@ export default function LandingPage() {
           <a href="#planos" className="bg-red-600 hover:bg-black text-white font-bold py-4 px-8 rounded-full text-lg shadow-xl hover:shadow-2xl transition-all">
             Começar Agora
           </a>
-          <Link to="/login" className="bg-white hover:bg-gray-100 text-gray-800 font-bold py-4 px-8 rounded-full text-lg shadow-md border border-gray-200 transition-all">
-            Teste Grátis (Demo)
+          <Link to="/register" className="bg-white hover:bg-gray-100 text-gray-800 font-bold py-4 px-8 rounded-full text-lg shadow-md border border-gray-200 transition-all">
+            Criar Conta Grátis
           </Link>
         </div>
 

@@ -49,9 +49,15 @@ ALTER TABLE configuracoes ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Usuário vê apenas seu restaurante" ON restaurantes
     FOR SELECT USING (id = get_user_restaurante_id());
 
+CREATE POLICY "Qualquer autenticado cria restaurante" ON restaurantes
+    FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+
 -- Usuarios Restaurante: Usuário vê seu próprio vínculo
 CREATE POLICY "Usuário vê seu próprio vínculo" ON usuarios_restaurante
     FOR SELECT USING (user_id = auth.uid());
+
+CREATE POLICY "Qualquer autenticado cria seu vínculo" ON usuarios_restaurante
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 -- Tabelas de Dados: Filtro por restaurante_id em todas as operações
 -- (Repetir para todas as tabelas)

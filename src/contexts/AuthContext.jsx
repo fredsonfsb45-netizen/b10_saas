@@ -76,6 +76,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const signIn = (email, password) => supabase.auth.signInWithPassword({ email, password });
+  const signUp = (email, password) => supabase.auth.signUp({ email, password });
   const signOut = () => supabase.auth.signOut();
 
   if (loading) return <div className="h-screen flex items-center justify-center font-bold text-red-600 animate-pulse">Iniciando B10 Gestão...</div>;
@@ -91,7 +92,7 @@ export const AuthProvider = ({ children }) => {
   );
 
   return (
-    <AuthContext.Provider value={{ user, userRole, tenantId, tenantData, signIn, signOut, loading }}>
+    <AuthContext.Provider value={{ user, userRole, tenantId, tenantData, signIn, signUp, signOut, loading }}>
       {children}
     </AuthContext.Provider>
   );

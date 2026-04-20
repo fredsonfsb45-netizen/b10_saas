@@ -60,6 +60,13 @@ export default function Login() {
             Entrar no Sistema
           </button>
         </form>
+
+        <div className="mt-8 pt-6 border-t border-gray-100 text-center">
+          <p className="text-gray-500 text-sm">
+            Ainda não tem o B10 na sua churrascaria? <br/>
+            <Link to="/register" className="text-red-600 font-bold hover:underline">Crie sua conta agora e comece o teste!</Link>
+          </p>
+        </div>
       </div>
     </div>
   );
