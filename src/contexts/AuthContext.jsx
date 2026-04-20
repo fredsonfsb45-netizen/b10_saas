@@ -13,10 +13,10 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const [retryCount, setRetryCount] = useState(0);
 
-  async function fetchUserProfile(userId) {
+  const fetchUserProfile = async (userId) => {
+    if (!supabase) return;
+    
     try {
-      if (!supabase) throw new Error("Supabase não configurado.");
-
       const { data, error: profileError } = await supabase
         .from('usuarios_restaurante')
         .select('cargo, restaurante_id, restaurantes (nome, cor_primaria, logo_url, status_assinatura)')
@@ -24,13 +24,8 @@ export const AuthProvider = ({ children }) => {
         .single();
 
       if (profileError) {
-        // Se for um usuário novo e o perfil ainda não existe, tentamos novamente até 5 vezes
         if (profileError.code === 'PGRST116' && retryCount < 5) {
-          console.log(`Perfil não encontrado. Tentativa ${retryCount + 1} de 5...`);
-          setTimeout(() => {
-            setRetryCount(prev => prev + 1);
-            fetchUserProfile(userId);
-          }, 2000);
+          setTimeout(() => setRetryCount(c => c + 1), 2000);
           return;
         }
         throw profileError;
@@ -41,22 +36,19 @@ export const AuthProvider = ({ children }) => {
         setTenantId(data.restaurante_id);
         setTenantData(data.restaurantes);
         setError(null);
-      }
-    } catch (err) {
-      console.error("Erro ao buscar perfil:", err.message);
-      setError(err.message);
-    } finally {
-      if (retryCount >= 5 || (tenantId && userRole)) {
         setLoading(false);
       }
+    } catch (err) {
+      setError(err.message);
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    if (user && !tenantId && retryCount < 5) {
+    if (user && !tenantId) {
       fetchUserProfile(user.id);
     }
-  }, [retryCount, user]);
+  }, [user, retryCount]);
 
   useEffect(() => {
     if (!supabase) {

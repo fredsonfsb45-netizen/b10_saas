@@ -8,6 +8,21 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      window.onerror = function(msg, url, lineNo, columnNo, error) {
+        var root = document.getElementById('root');
+        if (root) {
+          root.innerHTML = '<div style="padding: 20px; background: #fee2e2; color: #991b1b; font-family: sans-serif; border: 2px solid #ef4444; border-radius: 12px; margin: 20px; text-align: center;">' +
+            '<h1 style="margin-top: 0;">⚠️ Erro de Carregamento</h1>' +
+            '<p>Ocorreu um erro no JavaScript:</p>' +
+            '<code style="display: block; background: #fff; padding: 10px; border-radius: 6px; font-weight: bold; margin: 10px 0;">' + msg + '</code>' +
+            '<p style="font-size: 13px; color: #7f1d1d;">Se vir o erro "Link is not defined", por favor atualize os arquivos no GitHub.</p>' +
+            '<button onclick="location.reload()" style="background: #dc2626; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold;">Tentar Recarregar</button>' +
+            '</div>';
+        }
+        return false;
+      };
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
