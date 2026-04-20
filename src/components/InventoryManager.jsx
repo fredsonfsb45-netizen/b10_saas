@@ -304,7 +304,7 @@ export default function InventoryManager() {
                   {item.type ? `[${item.type.toUpperCase()}] ` : ''}{item.nome}
                 </td>
                 <td className="p-4 font-black text-red-600">
-                  {activeSubTab === 'entradas' ? (item.type === 'produto' ? 'P' : (item.type === 'insumo' ? 'I' : '-')) : `R$ ${(activeSubTab === 'produtos' ? item.preco : item.custo_unitario).toFixed(2)}`}
+                  {activeSubTab === 'entradas' ? (item.type === 'produto' ? 'P' : (item.type === 'insumo' ? 'I' : '-')) : `R$ ${(Number(activeSubTab === 'produtos' ? item.preco : item.custo_unitario) || 0).toFixed(2)}`}
                 </td>
                 <td className="p-4 italic font-bold text-gray-500">
                   {activeSubTab === 'produtos' ? item.estoque_atual : (activeSubTab === 'entradas' ? item.estoque_atual : item.quantidade)} {activeSubTab === 'insumos' && item.unidade_medida}

@@ -262,7 +262,7 @@ export default function OrderModal({ table, onClose }) {
             >
               {loading ? "Processando..." : (
                 <>
-                  <ShoppingCart size={20} /> CONFIRMAR PEDIDO (R$ {cart.reduce((acc, item) => acc + (item.preco * item.qty), 0).toFixed(2)})
+                  <ShoppingCart size={20} /> CONFIRMAR PEDIDO (R$ {(Number(cart.reduce((acc, item) => acc + (item.preco * item.qty), 0)) || 0).toFixed(2)})
                 </>
               )}
             </button>
