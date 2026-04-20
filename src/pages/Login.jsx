@@ -15,7 +15,7 @@ export default function Login() {
     setErrorMsg('');
     const { error } = await signIn(email, password);
     if (error) {
-      setErrorMsg("Credenciais inválidas ou erro de rede.");
+      setErrorMsg(error.message);
     } else {
       navigate('/app');
     }
