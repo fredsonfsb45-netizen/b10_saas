@@ -20,9 +20,14 @@ export default function LandingPage() {
         <h2 className="text-5xl font-black text-gray-900 mb-6 tracking-tight">O Sistema Definitivo para a sua <span className="text-red-600">Churrascaria</span></h2>
         <p className="text-xl text-gray-600 mb-10 max-w-2xl">Livre-se do papel. Garçons lançam na mesa, a cozinha recebe na tela, e você controla o fluxo de caixa de onde estiver. Tudo integrado.</p>
         
-        <a href="#planos" className="bg-red-600 hover:bg-black text-white font-bold py-4 px-8 rounded-full text-lg shadow-xl hover:shadow-2xl transition-all">
-          Começar Agora
-        </a>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <a href="#planos" className="bg-red-600 hover:bg-black text-white font-bold py-4 px-8 rounded-full text-lg shadow-xl hover:shadow-2xl transition-all">
+            Começar Agora
+          </a>
+          <Link to="/login" className="bg-white hover:bg-gray-100 text-gray-800 font-bold py-4 px-8 rounded-full text-lg shadow-md border border-gray-200 transition-all">
+            Teste Grátis (Demo)
+          </Link>
+        </div>
 
         <div className="grid md:grid-cols-3 gap-8 mt-20 w-full text-left">
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">

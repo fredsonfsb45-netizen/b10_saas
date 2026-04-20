@@ -18,7 +18,7 @@ export const AuthProvider = ({ children }) => {
 
       const { data, error: profileError } = await supabase
         .from('usuarios_restaurante')
-        .select('cargo, restaurante_id, restaurantes (nome, cor_primaria, logo_url)')
+        .select('cargo, restaurante_id, restaurantes (nome, cor_primaria, logo_url, status_assinatura)')
         .eq('user_id', userId)
         .single();
 
@@ -39,7 +39,7 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     if (!supabase) {
-      setError("Erro de Conexão: Verifique as Variáveis de Ambiente no Netlify.");
+      setError("Erro de Conexão: Verifique as Variáveis de Ambiente no seu provedor de hospedagem.");
       setLoading(false);
       return;
     }
@@ -85,7 +85,7 @@ export const AuthProvider = ({ children }) => {
       <div className="bg-white p-8 rounded-2xl shadow-xl border border-red-200 text-center max-w-md">
         <h2 className="text-2xl font-black text-red-600 mb-4">Erro de Configuração</h2>
         <p className="text-gray-600 mb-6">{error}</p>
-        <p className="text-sm text-gray-400">Verifique se você adicionou o VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no painel do Netlify.</p>
+        <p className="text-sm text-gray-400">Verifique se você adicionou o VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no painel da Vercel ou do seu provedor.</p>
       </div>
     </div>
   );

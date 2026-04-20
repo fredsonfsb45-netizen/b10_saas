@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { LogOut, LayoutDashboard, UtensilsCrossed, Flame, Settings } from 'lucide-react';
 import FinancialSummary from '../components/FinancialSummary';
 import TableOverview from '../components/TableOverview';
+import Configuracoes from '../components/Configuracoes';
 
 export default function Dashboard() {
   const { user, userRole, tenantData, signOut } = useAuth();
@@ -12,50 +13,72 @@ export default function Dashboard() {
   const nomeBrand = tenantData?.nome || 'B10 Gestão';
   
   const content = () => {
-    switch (activeTab) {
-      case 'dono':
-        return (
-          <div className="animate-in fade-in duration-500">
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-10">
-              <h2 className="text-2xl font-black text-gray-800">Painel Administrativo</h2>
-              <div className="text-sm font-bold text-gray-400 uppercase tracking-widest">Resumo Financeiro</div>
-            </div>
-            <FinancialSummary />
-            <div className="p-6">
-              <div className="bg-gray-900 rounded-2xl p-8 text-white flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden relative">
-                <div className="relative z-10">
-                  <h3 className="text-2xl font-black mb-2">Seu DRE está sendo processado</h3>
-                  <p className="text-gray-400 max-w-md text-sm">O sistema está vinculando automaticamente todos os seus lançamentos antigos ao ID do seu restaurante.</p>
-                </div>
-                <button className="bg-white text-black font-black px-6 py-3 rounded-full hover:bg-gray-200 transition-all z-10">
-                  Exportar Relatórios
-                </button>
-                <div className="absolute top-0 right-0 opacity-10 transform translate-x-10 -translate-y-10">
-                  <LayoutDashboard size={200} />
-                </div>
-              </div>
-            </div>
+    return (
+      <div className="flex flex-col h-full">
+        {/* Banner de Teste/Trial */}
+        {tenantData?.status_assinatura !== 'ativo_premium' && (
+          <div className="bg-amber-50 border-b border-amber-200 px-6 py-2 flex justify-between items-center animate-pulse">
+            <span className="text-amber-800 text-xs font-bold flex items-center gap-2">
+              ⚠️ MODO DE TESTE ATIVO - Sistema liberado para validação
+            </span>
+            <button className="text-[10px] bg-amber-200 text-amber-900 px-2 py-0.5 rounded font-black uppercase tracking-tighter">
+              Versão Trial
+            </button>
           </div>
-        );
-      case 'garcom':
-        return (
-          <div className="animate-in slide-in-from-right duration-500">
-            <TableOverview />
-          </div>
-        );
-      case 'cozinha':
-        return (
-          <div className="p-12 text-center flex flex-col items-center justify-center min-h-[60vh] animate-in zoom-in duration-500">
-            <div className="p-6 bg-orange-100 rounded-full text-orange-600 mb-6">
-              <Flame size={48} />
-            </div>
-            <h2 className="text-3xl font-black text-gray-800 mb-4">Monitor da Cozinha</h2>
-            <p className="text-gray-500 max-w-sm mx-auto">Aguardando novos pedidos dos garçons para exibição em tempo real.</p>
-          </div>
-        );
-      default:
-        return <div>Selecione um menu.</div>;
-    }
+        )}
+
+        <div className="flex-1 overflow-y-auto">
+          {(() => {
+            switch (activeTab) {
+              case 'dono':
+                return (
+                  <div className="animate-in fade-in duration-500">
+                    <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-10">
+                      <h2 className="text-2xl font-black text-gray-800">Painel Administrativo</h2>
+                      <div className="text-sm font-bold text-gray-400 uppercase tracking-widest">Resumo Financeiro</div>
+                    </div>
+                    <FinancialSummary />
+                    <div className="p-6">
+                      <div className="bg-gray-900 rounded-2xl p-8 text-white flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden relative">
+                        <div className="relative z-10">
+                          <h3 className="text-2xl font-black mb-2">Seu DRE está sendo processado</h3>
+                          <p className="text-gray-400 max-w-md text-sm">O sistema está vinculando automaticamente todos os seus lançamentos antigos ao ID do seu restaurante.</p>
+                        </div>
+                        <button className="bg-white text-black font-black px-6 py-3 rounded-full hover:bg-gray-200 transition-all z-10">
+                          Exportar Relatórios
+                        </button>
+                        <div className="absolute top-0 right-0 opacity-10 transform translate-x-10 -translate-y-10">
+                          <LayoutDashboard size={200} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              case 'garcom':
+                return (
+                  <div className="animate-in slide-in-from-right duration-500">
+                    <TableOverview />
+                  </div>
+                );
+              case 'cozinha':
+                return (
+                  <div className="p-12 text-center flex flex-col items-center justify-center min-h-[60vh] animate-in zoom-in duration-500">
+                    <div className="p-6 bg-orange-100 rounded-full text-orange-600 mb-6">
+                      <Flame size={48} />
+                    </div>
+                    <h2 className="text-3xl font-black text-gray-800 mb-4">Monitor da Cozinha</h2>
+                    <p className="text-gray-500 max-w-sm mx-auto">Aguardando novos pedidos dos garçons para exibição em tempo real.</p>
+                  </div>
+                );
+              case 'config':
+                return <Configuracoes />;
+              default:
+                return <div>Selecione um menu.</div>;
+            }
+          })()}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -91,6 +114,13 @@ export default function Dashboard() {
             style={activeTab === 'cozinha' ? { backgroundColor: corBrand } : {}}
           >
             <Flame size={18} /> Monitor Cozinha
+          </button>
+          <button 
+            onClick={() => setActiveTab('config')}
+            className={`text-left px-4 py-3 rounded font-bold transition-colors flex items-center gap-2 ${activeTab === 'config' ? 'text-white' : 'hover:bg-gray-800 text-gray-300'}`}
+            style={activeTab === 'config' ? { backgroundColor: corBrand } : {}}
+          >
+            <Settings size={18} /> Configurações
           </button>
         </nav>
         
