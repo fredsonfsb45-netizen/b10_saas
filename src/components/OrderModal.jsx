@@ -79,13 +79,6 @@ export default function OrderModal({ table, onClose }) {
       const { error: iError } = await supabase.from('itens_pedido').insert(itemsToInsert);
       if (iError) throw iError;
 
-      // 3. Atualizar total da comanda
-      const newTotal = cart.reduce((acc, item) => acc + (item.preco * item.qty), 0);
-      await supabase.rpc('increment_comanda_total', { 
-        cid: currentComandaId, 
-        amount: newTotal 
-      });
-
       setCart([]);
       fetchComandaItems();
       setActiveTab('conta');
