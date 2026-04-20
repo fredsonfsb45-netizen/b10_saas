@@ -141,8 +141,8 @@ export default function InventoryManager() {
               >
                 <option value="">Escolha um produto ou insumo...</option>
                 {data.map(item => (
-                  <option key={`${item.type}-${item.id}`} value={item.id}>
-                    [{item.type.toUpperCase()}] {item.nome} (Atual: {item.estoque_atual})
+                  <option key={`${item.type || 'item'}-${item.id}`} value={item.id}>
+                    [{item.type?.toUpperCase() || 'ITEM'}] {item.nome} (Atual: {item.estoque_atual})
                   </option>
                 ))}
               </select>
@@ -288,7 +288,7 @@ export default function InventoryManager() {
                   {item.type ? `[${item.type.toUpperCase()}] ` : ''}{item.nome}
                 </td>
                 <td className="p-4 font-black text-red-600">
-                  {activeSubTab === 'entradas' ? (item.type === 'produto' ? 'P' : 'I') : `R$ ${(activeSubTab === 'produtos' ? item.preco : item.custo_unitario).toFixed(2)}`}
+                  {activeSubTab === 'entradas' ? (item.type === 'produto' ? 'P' : (item.type === 'insumo' ? 'I' : '-')) : `R$ ${(activeSubTab === 'produtos' ? item.preco : item.custo_unitario).toFixed(2)}`}
                 </td>
                 <td className="p-4 italic font-bold text-gray-500">
                   {activeSubTab === 'produtos' ? item.estoque_atual : (activeSubTab === 'entradas' ? item.estoque_atual : item.quantidade)} {activeSubTab === 'insumos' && item.unidade_medida}
