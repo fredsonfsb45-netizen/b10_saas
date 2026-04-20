@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { X, Plus, Minus, Receipt, ShoppingCart, CheckCircle, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function OrderModal({ table, onClose }) {
   const [products, setProducts] = useState([]);
@@ -9,6 +10,7 @@ export default function OrderModal({ table, onClose }) {
   const [comandaId, setComandaId] = useState(table.comanda_id);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('menu'); // 'menu' ou 'conta'
+  const { tenantId } = useAuth();
 
   const fetchProducts = useCallback(async () => {
     const { data, error } = await supabase.from('produtos').select('*').order('nome');
@@ -58,7 +60,12 @@ export default function OrderModal({ table, onClose }) {
       if (!currentComandaId) {
         const { data: newComanda, error: cError } = await supabase
           .from('comandas')
-          .insert({ mesa: table.id, status: 'aberta', total: 0 })
+          .insert({ 
+            mesa: table.id, 
+            status: 'aberta', 
+            total: 0,
+            restaurante_id: tenantId 
+          })
           .select()
           .single();
         
@@ -73,7 +80,8 @@ export default function OrderModal({ table, onClose }) {
         produto_id: item.id,
         quantidade: item.qty,
         preco_unitario: item.preco,
-        status: 'pendente'
+        status: 'pendente',
+        restaurante_id: tenantId
       }));
 
       const { error: iError } = await supabase.from('itens_pedido').insert(itemsToInsert);
@@ -83,6 +91,7 @@ export default function OrderModal({ table, onClose }) {
       fetchComandaItems();
       setActiveTab('conta');
     } catch (err) {
+      alert("ERRO AO LANÇAR: " + err.message);
       console.error("Erro ao lançar itens:", err.message);
     } finally {
       setLoading(false);
